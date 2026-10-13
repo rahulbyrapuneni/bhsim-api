@@ -1,0 +1,17 @@
+# ---PYTHON---
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+
+# ---GENERATED DATA---
+generated/
+*.db
+
+# ---ENVIRONMENT---
+.env
+.env.*
+!.env.example
+
+# ---EDITOR---
+.vscode/
