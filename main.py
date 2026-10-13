@@ -1,3 +1,6 @@
+from fastapi.responses import FileResponse
+from uuid import UUID
+
 from pathlib import Path
 from uuid import uuid4
 
@@ -80,3 +83,39 @@ def create_dataset(request: DatasetRequest):
     "database_format": "sqlite",
     "validation": validation
 }
+
+# ---DATASET RETRIEVAL---
+@app.get("/v1/datasets/{dataset_id}")
+def get_dataset(dataset_id: UUID):
+    database_path = DATA_DIR / f"{dataset_id}.db"
+
+    if not database_path.is_file():
+        raise HTTPException(
+            status_code=404,
+            detail="Dataset not found"
+        )
+
+    return {
+        "dataset_id": str(dataset_id),
+        "status": "completed",
+        "database_format": "sqlite",
+        "file_size_bytes": database_path.stat().st_size
+    }
+
+
+# ---DATASET DOWNLOAD---
+@app.get("/v1/datasets/{dataset_id}/download")
+def download_dataset(dataset_id: UUID):
+    database_path = DATA_DIR / f"{dataset_id}.db"
+
+    if not database_path.is_file():
+        raise HTTPException(
+            status_code=404,
+            detail="Dataset not found"
+        )
+
+    return FileResponse(
+        path=database_path,
+        media_type="application/vnd.sqlite3",
+        filename=f"bhsim-{dataset_id}.db"
+    )

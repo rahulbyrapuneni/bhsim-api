@@ -103,7 +103,25 @@ A successful request returns HTTP status **201 Created**.
 
 Generated databases are saved locally inside the `generated/` directory.
 
-Dataset download and retrieval endpoints are planned for a future release.
+### GET /v1/datasets/{dataset_id}
+
+Retrieves metadata about a previously generated dataset.
+
+Returns:
+- Dataset ID
+- Generation status
+- Database format
+- SQLite file size in bytes
+
+Returns HTTP 404 if the dataset does not exist.
+
+### GET /v1/datasets/{dataset_id}/download
+
+Downloads a previously generated SQLite database.
+
+Returns HTTP 200 with the SQLite file.
+
+Returns HTTP 404 if the dataset does not exist.
 
 ## Testing
 
