@@ -29,8 +29,9 @@ jobs:
       - name: Run automated tests
         run: python -m pytest -v
 
+  
   docker:
-    name: Docker Build
+    name: Docker Build and Smoke Test
     runs-on: ubuntu-latest
 
     steps:
@@ -39,3 +40,29 @@ jobs:
 
       - name: Build Docker image
         run: docker build -t bhsim-api:ci .
+
+      - name: Start API container
+        run: |
+          docker run -d \
+            --name bhsim-api-test \
+            -p 127.0.0.1:8000:8000 \
+            bhsim-api:ci
+
+      - name: Verify API health
+        run: |
+          for i in {1..15}; do
+            if curl --fail --silent http://127.0.0.1:8000/health; then
+              echo ""
+              echo "Docker smoke test passed"
+              exit 0
+            fi
+            sleep 2
+          done
+
+          echo "Docker smoke test failed"
+          docker logs bhsim-api-test
+          exit 1
+
+      - name: Stop test container
+        if: always()
+        run: docker rm -f bhsim-api-test || true
