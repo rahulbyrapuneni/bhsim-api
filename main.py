@@ -1,5 +1,6 @@
 from fastapi.responses import FileResponse
 from uuid import UUID
+import time
 
 from pathlib import Path
 from uuid import uuid4
@@ -49,9 +50,15 @@ def create_dataset(request: DatasetRequest):
 
         # ---GENERATE AND VALIDATE DATASET---
     try:
+                # ---GENERATION TIMING---
+        generation_start = time.perf_counter()
         simulator.generate(database_path)
+        generation_seconds = time.perf_counter() - generation_start
 
+        # ---VALIDATION TIMING---
+        validation_start = time.perf_counter()
         validation = simulator.validate()
+        validation_seconds = time.perf_counter() - validation_start
 
         if not validation.get("valid", False):
             database_path.unlink(missing_ok=True)
@@ -81,7 +88,14 @@ def create_dataset(request: DatasetRequest):
     "clients_requested": request.clients,
     "employees_requested": request.employees,
     "database_format": "sqlite",
-    "validation": validation
+    "validation": validation,
+    "performance": {
+        "generation_seconds": round(generation_seconds, 3),
+        "validation_seconds": round(validation_seconds, 3),
+        "total_processing_seconds": round(
+            generation_seconds + validation_seconds, 3
+        )
+    }
 }
 
 # ---DATASET RETRIEVAL---
