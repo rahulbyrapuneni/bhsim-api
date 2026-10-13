@@ -2,226 +2,85 @@
 
 **A REST API for generating, validating, and downloading synthetic behavioral health datasets.**
 
-Built with FastAPI and powered by [BHSim](https://github.com/rahulbyrapuneni/bhsim), an open-source Python library for generating connected synthetic behavioral health data.
+[![CI](https://github.com/rahulbyrapuneni/bhsim-api/actions/workflows/ci.yml/badge.svg)](https://github.com/rahulbyrapuneni/bhsim-api/actions)
+![Python](https://img.shields.io/badge/Python-3.14-blue)
+![FastAPI](https://img.shields.io/badge/FastAPI-REST_API-009688)
+![Docker](https://img.shields.io/badge/Docker-Containerized-2496ED)
 
-BHSim API makes synthetic dataset generation accessible to applications, analytical workflows, testing environments, and future AI agents through HTTP requests.
+Built with FastAPI and powered by [BHSim](https://github.com/rahulbyrapuneni/bhsim), an open-source Python library for generating interconnected synthetic behavioral health data.
 
-## Overview
+BHSim API exposes the library through HTTP, allowing external applications, data platforms, and AI workflows to generate and retrieve synthetic datasets without directly integrating Python generation code.
 
-BHSim API provides a lightweight service for generating realistic, interconnected synthetic behavioral health datasets without requiring users to directly interact with the underlying Python library.
+## Features
 
-It converts the functionality of BHSim into a REST interface that can be consumed by other software systems.
-
-The service supports:
-
-- Synthetic SQLite dataset generation
-- Configurable simulation parameters
-- Automated data validation
-- Dataset metadata retrieval
-- SQLite database downloads
-- Containerized deployment using Docker
-- Persistent dataset storage
-- Automated API testing
-
-**All generated records are synthetic. The API does not require real patient information or protected health information (PHI).**
+- Generate synthetic relational datasets through REST endpoints.
+- Configure client count, employee count, history duration, and random seed.
+- Validate generated data using BHSim's built-in validator.
+- Retrieve dataset metadata and download SQLite databases.
+- Run the API in Docker with persistent dataset storage.
+- Automatically run tests, Docker builds, and smoke tests through GitHub Actions.
 
 ## Architecture
 
 ```text
-Client Application / API Consumer
-              |
-              v
-        FastAPI Service
-              |
-              v
-       Request Validation
-              |
-              v
-       BHSim Python Library
-              |
-              v
-       Synthetic Data Engine
-              |
-              v
-        SQLite Database
-              |
-              v
-       Dataset Validation
-              |
-              v
-       Dataset Storage
-              |
-              v
-    API Response / Download
+Client Application
+       |
+       v
+   FastAPI
+       |
+       v
+Input Validation
+       |
+       v
+  BHSim Library
+       |
+       v
+SQLite Generation
+       |
+       v
+Data Validation
+       |
+       v
+Storage / Download
 ```
 
-The architecture separates HTTP request handling from the synthetic data-generation engine.
+**Tech stack:** Python · FastAPI · Pydantic · BHSim · SQLite · Pytest · Docker · GitHub Actions
 
-BHSim remains an independent Python library, while BHSim API exposes its functionality as an HTTP service.
+## Quick Start
 
-## Technology Stack
+### Run locally
 
-| Technology | Purpose |
-|---|---|
-| Python | Application development |
-| FastAPI | REST API framework |
-| Pydantic | Request validation |
-| BHSim 1.0.1 | Synthetic data generation |
-| SQLite | Generated relational databases |
-| Uvicorn | ASGI application server |
-| Pytest | Automated testing |
-| HTTPX | API testing support |
-| Docker | Containerized application deployment |
-| Docker Volumes | Persistent dataset storage |
-| Git / GitHub | Version control and source distribution |
-
-## Features
-
-### 1. Synthetic Dataset Generation
-
-Generate behavioral health datasets through HTTP requests.
-
-Supported configuration parameters include:
-
-| Parameter | Default | Description |
-|---|---:|---|
-| `clients` | 100 | Number of synthetic individuals |
-| `employees` | 20 | Number of synthetic employees |
-| `history_months` | 12 | Number of historical months |
-| `seed` | 42 | Random seed for reproducibility |
-
-The API validates request parameters before invoking the generation engine.
-
-### 2. Data Validation
-
-Each generated dataset is checked using BHSim's built-in validation functionality.
-
-The API reports successful generation only when the library's validation passes.
-
-Example:
-
-```json
-{
-  "validation": {
-    "valid": true,
-    "issues": []
-  }
-}
-```
-
-Validation failures are returned as API errors.
-
-### 3. Dataset Retrieval
-
-Retrieve metadata about a previously generated dataset using its unique identifier.
-
-### 4. Dataset Download
-
-Download generated SQLite databases through an HTTP endpoint.
-
-The downloaded database can be used with SQLite-compatible tools, SQL clients, analytical applications, and development workflows.
-
-### 5. Docker Deployment
-
-Run the application inside a Docker container with Python and application dependencies packaged together.
-
-### 6. Persistent Storage
-
-Generated SQLite files can be stored in a named Docker volume so that datasets survive container removal and recreation.
-
-## Project Structure
-
-```text
-bhsim-api/
-├── main.py
-├── Dockerfile
-├── .dockerignore
-├── .gitignore
-├── requirements.txt
-├── README.md
-├── tests/
-│   └── test_api.py
-└── generated/            # Created at runtime; excluded from Git
-```
-
-The local `.venv/` directory is also excluded from version control.
-
-## Installation
-
-### Prerequisites
-
-- A compatible Python installation
-- Git
-- Docker Desktop (optional for local Python development)
-
-The current Docker image uses Python 3.14.
-
-### 1. Clone the Repository
-
-```bash
+```powershell
 git clone https://github.com/rahulbyrapuneni/bhsim-api.git
 cd bhsim-api
-```
-
-### 2. Create a Virtual Environment
-
-```powershell
 python -m venv .venv
-```
-
-### 3. Install Dependencies
-
-Windows PowerShell:
-
-```powershell
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
-```
-
-### 4. Start the API Server
-
-```powershell
 .\.venv\Scripts\python.exe -m uvicorn main:app --reload
 ```
 
-The development server will start at:
+### Run with Docker
 
-http://127.0.0.1:8000
-
-### 5. Access API Documentation
-
-Open:
-
-http://127.0.0.1:8000/docs
-
-FastAPI automatically generates interactive Swagger UI documentation for the available endpoints.
-
-The OpenAPI specification is also available at:
-
-http://127.0.0.1:8000/openapi.json
-
-## API Reference
-
-### GET /health
-
-Checks whether the API service is responding.
-
-**Example response — HTTP 200**
-
-```json
-{
-  "status": "healthy",
-  "service": "BHSim API",
-  "version": "0.1.0"
-}
+```powershell
+docker build -t bhsim-api:0.1 .
+docker run -d --name bhsim-api-container -p 127.0.0.1:8000:8000 -v bhsim-data:/app/generated bhsim-api:0.1
 ```
 
-This endpoint verifies API responsiveness. It is not a complete dependency or database health check.
+**Interactive API documentation:** http://127.0.0.1:8000/docs
 
-### POST /v1/datasets
+Docker volumes preserve generated datasets across container removal and recreation, provided the volume is retained.
 
-Generates and validates a synthetic behavioral health dataset.
+## API Endpoints
 
-**Example request**
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/health` | Check API responsiveness |
+| POST | `/v1/datasets` | Generate and validate a dataset |
+| GET | `/v1/datasets/{dataset_id}` | Retrieve dataset metadata |
+| GET | `/v1/datasets/{dataset_id}/download` | Download the SQLite database |
+
+### Example Request
+
+**POST `/v1/datasets`**
 
 ```json
 {
@@ -232,7 +91,7 @@ Generates and validates a synthetic behavioral health dataset.
 }
 ```
 
-**Example response — HTTP 201 Created**
+**Example successful response — HTTP 201**
 
 ```json
 {
@@ -248,282 +107,54 @@ Generates and validates a synthetic behavioral health dataset.
 }
 ```
 
-A unique dataset identifier is generated for each successful request.
+Each generated dataset receives a unique identifier that can be used for metadata retrieval and downloads.
 
-**Possible responses**
+## Testing & Continuous Integration
 
-| HTTP Code | Meaning |
-|---|---|
-| 201 | Dataset successfully created |
-| 422 | Invalid request parameters |
-| 500 | Dataset generation or validation failed |
-
-### GET /v1/datasets/{dataset_id}
-
-Retrieves metadata for a previously generated dataset.
-
-**Example request**
-
-```http
-GET /v1/datasets/e834482a-a6f5-4812-bd93-149bd14928f3
-```
-
-**Example response — HTTP 200**
-
-```json
-{
-  "dataset_id": "e834482a-a6f5-4812-bd93-149bd14928f3",
-  "status": "completed",
-  "database_format": "sqlite",
-  "file_size_bytes": 1234567
-}
-```
-
-The file size above is illustrative and varies by dataset.
-
-Returns HTTP 404 if the requested dataset does not exist, or HTTP 422 if the identifier is malformed.
-
-### GET /v1/datasets/{dataset_id}/download
-
-Downloads the generated SQLite database.
-
-**Example request**
-
-```http
-GET /v1/datasets/e834482a-a6f5-4812-bd93-149bd14928f3/download
-```
-
-**Successful response — HTTP 200**
-
-Returns a SQLite database file.
-
-Example downloaded filename:
-
-```text
-bhsim-e834482a-a6f5-4812-bd93-149bd14928f3.db
-```
-
-Returns HTTP 404 if the dataset does not exist.
-
-## Docker Deployment
-
-Docker allows BHSim API to run in an isolated environment with its required dependencies.
-
-### 1. Build the Docker Image
-
-From the repository root:
-
-```powershell
-docker build -t bhsim-api:0.1 .
-```
-
-### 2. Run the Container
-
-```powershell
-docker run -d --name bhsim-api-container -p 127.0.0.1:8000:8000 -v bhsim-data:/app/generated bhsim-api:0.1
-```
-
-This command:
-
-- Runs the API in the background.
-- Makes the API available on localhost port 8000.
-- Creates or reuses the named Docker volume `bhsim-data`.
-- Stores generated databases outside the container's temporary filesystem.
-
-### 3. Verify the Container
-
-```powershell
-docker ps
-```
-
-Open:
-
-http://127.0.0.1:8000/docs
-
-### 4. View Container Logs
-
-```powershell
-docker logs bhsim-api-container
-```
-
-### 5. Stop the Container
-
-```powershell
-docker stop bhsim-api-container
-```
-
-### 6. Start the Existing Container
-
-```powershell
-docker start bhsim-api-container
-```
-
-### 7. Remove the Container
-
-First stop it, then run:
-
-```powershell
-docker rm bhsim-api-container
-```
-
-Removing the container does not automatically remove the named Docker volume.
-
-### 8. Recreate the Container with Existing Data
-
-```powershell
-docker run -d --name bhsim-api-container -p 127.0.0.1:8000:8000 -v bhsim-data:/app/generated bhsim-api:0.1
-```
-
-Because the same volume is mounted, previously generated SQLite databases remain available.
-
-**Note:** Removing the Docker volume itself would delete the datasets stored in that volume.
-
-## Data Persistence Verification
-
-Persistent storage was manually verified using the following process:
-
-1. Generate a dataset through `POST /v1/datasets`.
-2. Save the generated dataset ID.
-3. Stop and remove the Docker container.
-4. Recreate the container using the same named Docker volume.
-5. Request the previously generated dataset using `GET /v1/datasets/{dataset_id}`.
-
-The existing dataset remained accessible and returned HTTP 200 after the container was recreated.
-
-This demonstrates persistence across container replacement on the same Docker host.
-
-## Automated Testing
-
-BHSim API currently includes seven automated tests.
-
-| Test | Expected Behavior |
-|---|---|
-| Health endpoint | Returns HTTP 200 |
-| Invalid client count | Returns HTTP 422 |
-| Dataset generation | Returns HTTP 201 and passes validation |
-| Dataset retrieval | Returns HTTP 200 and file metadata |
-| Dataset download | Returns HTTP 200 with a SQLite file header |
-| Missing dataset | Returns HTTP 404 |
-| Invalid dataset ID | Returns HTTP 422 |
-
-Run all tests:
+Run the tests locally:
 
 ```powershell
 .\.venv\Scripts\python.exe -m pytest -v
 ```
 
-**Current verified result: 7 tests passed.**
+**Verified milestones:**
 
-These tests verify the implemented API behavior and selected validation conditions. They are not a substitute for full security, concurrency, or production load testing.
+- 7 automated API tests passed.
+- Docker image built and API executed successfully.
+- Dataset persistence verified across container recreation.
+- GitHub Actions API tests and Docker smoke test passed.
 
-## Example Generated Dataset
+The [GitHub Actions workflow](https://github.com/rahulbyrapuneni/bhsim-api/actions) automatically runs tests, builds the Docker image, and checks that the containerized API responds to `/health`.
 
-During local development, one test configuration used:
+## Development Status
 
-```json
-{
-  "clients": 100,
-  "employees": 20,
-  "history_months": 12,
-  "seed": 42
-}
-```
+**v0.1.0 — Initial development milestone complete.**
 
-The generated database contained:
+The API has been tested locally and in Docker. It is not yet intended for unrestricted public deployment.
 
-| Entity | Records |
-|---|---:|
-| Individuals | 100 |
-| Employees | 20 |
-| Programs | 8 |
-| Visits | 1,477 |
-| Assessments | 390 |
+Production hardening, including authentication, rate limiting, dataset cleanup, and operational monitoring, remains future work.
 
-The database contained 18 tables.
+## AI Engineering Journey
 
-SQLite's `PRAGMA foreign_key_check` reported zero violations, and BHSim's built-in validation returned:
+BHSim API is **Chapter 2** of a connected open-source engineering portfolio exploring the journey from synthetic data generation to deployed enterprise AI.
 
-```json
-{
-  "valid": true,
-  "issues": []
-}
-```
+| Chapter | Project | Purpose | Status |
+|---|---|---|---|
+| 1 | [BHSim](https://github.com/rahulbyrapuneni/bhsim) | Generate synthetic relational data | Completed |
+| 2 | **BHSim API** | Expose data generation through HTTP | Completed |
+| 3 | BridgeKit | Connect databases and external APIs | Planned |
+| 4 | ActionFlow | Add AI tool calling and controlled workflows | Planned |
+| 5 | AI Evaluation & Observability | Test, trace, and measure AI behavior | Planned |
+| 6 | FieldOps AI | Deliver an integrated customer-facing AI solution | Planned |
 
-These are results from one development test, not guaranteed counts for every configuration.
+Each chapter adds a specific engineering capability, ultimately contributing to a deployable AI system designed around real customer integration requirements.
 
-## Current Limitations
-
-BHSim API is currently a development-stage service.
-
-- Dataset generation executes synchronously.
-- Generated files are stored on the local filesystem or in a Docker volume.
-- There is no authentication or tenant isolation.
-- There is no rate limiting or dataset expiration.
-- Generation resource limits are basic.
-- Metadata is derived from stored files rather than a dedicated metadata database.
-- Production monitoring and distributed job execution are not implemented.
-- No public production deployment has been completed.
-
-**Do not expose the current service directly to the public internet without additional security and operational controls.**
-
-## Development Roadmap
-
-### Completed
-
-- [x] FastAPI service
-- [x] BHSim package integration
-- [x] Request validation
-- [x] Synthetic SQLite dataset generation
-- [x] Built-in dataset validation
-- [x] Dataset metadata retrieval
-- [x] SQLite dataset downloads
-- [x] Seven automated API tests
-- [x] Docker image build
-- [x] Docker container execution
-- [x] Persistent Docker volume verification
-
-### Planned
-
-- [ ] GitHub Actions CI/CD
-- [ ] Automated Docker build verification
-- [ ] Improved API error handling and logging
-- [ ] Expanded tests and isolated test storage
-- [ ] Dataset retention and cleanup controls
-- [ ] API authentication and request limits
-- [ ] Deployment configuration improvements
-- [ ] Integration with external services and AI workflows
-
-## Future AI Integration
-
-BHSim API is intended to serve as a reusable synthetic-data service for future AI engineering projects.
-
-Potential integrations include:
-
-- AI workflow development and testing
-- SQL-based analytical applications
-- Tool-using AI agents
-- API integration demonstrations
-- Evaluation of AI applications using synthetic relational data
-
-This API is a foundational engineering component rather than an AI model or autonomous AI agent.
-
-## Related Projects
-
-**BHSim Python Library**
-
-https://github.com/rahulbyrapuneni/bhsim
-
-**BHSim API**
-
-https://github.com/rahulbyrapuneni/bhsim-api
-
-## Author and Maintainer
+## Author
 
 **Rahul Byrapuneni**
 
-Open-source software development focused on synthetic data, data integration, AI engineering, and enterprise deployment.
+[GitHub](https://github.com/rahulbyrapuneni) · [Portfolio](https://rahul-portfolio-phi-azure.vercel.app/)
 
 ## License
 
-See the repository's license information when a license is added. No separate license is declared for this API repository in this documentation.
+The API repository does not currently declare a separate license. The underlying BHSim library is maintained as an independent open-source project.
