@@ -10,6 +10,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # ---COPY APPLICATION---
 COPY main.py .
+COPY quota.py .
+COPY cleanup.py .
 
 # ---CREATE DATA DIRECTORY---
 RUN mkdir -p /app/generated
@@ -18,4 +20,4 @@ RUN mkdir -p /app/generated
 EXPOSE 8000
 
 # ---START API SERVER---
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["sh", "-c", "exec uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}"]

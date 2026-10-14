@@ -15,3 +15,17 @@ generated/
 
 # ---EDITOR---
 .vscode/
+
+# ---LOCAL DIAGNOSTIC SCRIPTS---
+check_neon_*.py
+check_quota_persistence.py
+test_neon_quota.py
+
+# ---LOCAL SECRETS---
+.env
+.env.*
+
+# ---LOCAL NEON TEST SCRIPTS---
+check_neon_concurrency.py
+check_quota_persistence.py
+test_neon_quota.py

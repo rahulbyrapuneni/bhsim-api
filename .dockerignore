@@ -8,3 +8,6 @@ tests/
 *.db
 .env
 .env.*
+check_neon_*.py
+check_quota_persistence.py
+benchmark*.py
