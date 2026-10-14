@@ -29,11 +29,10 @@ jobs:
       - name: Run automated tests
         run: python -m pytest -v
 
-  
-    docker:
-      name: Docker Build and Smoke Test
-      needs: test
-      runs-on: ubuntu-latest
+  docker:
+    name: Docker Build and Smoke Test
+    needs: test
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
