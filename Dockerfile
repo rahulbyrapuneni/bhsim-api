@@ -8,10 +8,8 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# ---COPY APPLICATION---
-COPY main.py .
-COPY quota.py .
-COPY cleanup.py .
+# ---COPY APPLICATION FILES---
+COPY main.py quota.py cleanup.py logging_service.py ./
 
 # ---CREATE DATA DIRECTORY---
 RUN mkdir -p /app/generated

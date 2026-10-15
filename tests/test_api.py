@@ -1,7 +1,7 @@
 
 import pytest
 from uuid import uuid4
-
+from fastapi import HTTPException
 from fastapi.testclient import TestClient
 from main import app
 import main
@@ -28,11 +28,18 @@ VALID_PAYLOAD = {
 def configure_test_environment(monkeypatch):
     monkeypatch.setenv("BHSIM_API_KEY", TEST_API_KEY)
 
-    # ---AVOID REAL DATABASE CALLS---
+    # ---MOCK DAILY QUOTA---
     monkeypatch.setattr(
         main,
         "consume_daily_quota",
         lambda api_key: 1
+    )
+
+    # ---MOCK REQUEST LOGGING---
+    monkeypatch.setattr(
+        main,
+        "log_api_request",
+        lambda **kwargs: None
     )
 
 
@@ -266,3 +273,105 @@ def test_download_releases_tracking():
     # ---VERIFY TRACKING WAS RELEASED---
     with main.download_lock:
         assert main.active_downloads.get(database_path, 0) == 0
+
+
+# ---VERIFY SUCCESSFUL GENERATION LOGGING---
+def test_successful_generation_is_logged(monkeypatch):
+    captured_logs = []
+
+    monkeypatch.setattr(
+        main,
+        "log_api_request",
+        lambda **kwargs: captured_logs.append(kwargs)
+    )
+
+    response = client.post(
+        "/v1/datasets",
+        headers={"X-API-Key": TEST_API_KEY},
+        json={
+            "clients": 10,
+            "employees": 5,
+            "history_months": 1,
+            "seed": 42
+        }
+    )
+
+    assert response.status_code == 201
+    assert len(captured_logs) == 1
+
+    log = captured_logs[0]
+    assert log["clients_requested"] == 10
+    assert log["employees_requested"] == 5
+    assert log["history_months"] == 1
+    assert log["status_code"] == 201
+    assert log["processing_seconds"] >= 0
+    assert log["dataset_id"] == response.json()["dataset_id"]
+
+    # ---VERIFY BUSY REQUEST LOGGING---
+def test_busy_generation_is_logged(monkeypatch):
+    captured_logs = []
+
+    monkeypatch.setattr(
+        main,
+        "log_api_request",
+        lambda **kwargs: captured_logs.append(kwargs)
+    )
+
+    main.generation_lock.acquire()
+
+    try:
+        response = client.post(
+            "/v1/datasets",
+            headers={"X-API-Key": TEST_API_KEY},
+            json={
+                "clients": 10,
+                "employees": 5,
+                "history_months": 1,
+                "seed": 42
+            }
+        )
+    finally:
+        main.generation_lock.release()
+
+    assert response.status_code == 503
+    assert len(captured_logs) == 1
+    assert captured_logs[0]["status_code"] == 503
+    assert captured_logs[0]["error_code"] == "GENERATION_BUSY"
+
+    # ---VERIFY QUOTA EXCEEDED LOGGING---
+def test_quota_exceeded_is_logged(monkeypatch):
+    captured_logs = []
+
+    monkeypatch.setattr(
+        main,
+        "log_api_request",
+        lambda **kwargs: captured_logs.append(kwargs)
+    )
+
+    def reject_quota(api_key):
+        raise HTTPException(
+            status_code=429,
+            detail="Daily generation limit reached"
+        )
+
+    monkeypatch.setattr(
+        main,
+        "consume_daily_quota",
+        reject_quota
+    )
+
+    response = client.post(
+        "/v1/datasets",
+        headers={"X-API-Key": TEST_API_KEY},
+        json={
+            "clients": 10,
+            "employees": 5,
+            "history_months": 1,
+            "seed": 42
+        }
+    )
+
+    assert response.status_code == 429
+    assert len(captured_logs) == 1
+    assert captured_logs[0]["status_code"] == 429
+    assert captured_logs[0]["error_code"] == "QUOTA_EXCEEDED"

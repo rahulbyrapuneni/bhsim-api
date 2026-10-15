@@ -1,5 +1,6 @@
 from fastapi.responses import FileResponse
 from uuid import UUID
+from logging_service import log_api_request
 import time
 import os
 import secrets
@@ -19,7 +20,7 @@ from bhsim import BHSimulator
 app = FastAPI(
     title="BHSim API",
     description="API for generating synthetic behavioral health data",
-    version="0.2.0"
+    version="0.3.0"
 )
 
 DATA_DIR = Path("generated")
@@ -68,7 +69,7 @@ def health_check():
     return {
         "status": "healthy",
         "service": "BHSim API",
-        "version": "0.2.0"
+        "version": "0.3.0"
     }
 
 # ---GENERATE DATASET---
@@ -80,6 +81,17 @@ def create_dataset(
 ):
     # ---ALLOW ONE ACTIVE GENERATION---
     if not generation_lock.acquire(blocking=False):
+
+        # ---LOG REJECTED REQUEST---
+        log_api_request(
+            api_key=api_key,
+            clients_requested=request.clients,
+            employees_requested=request.employees,
+            history_months=request.history_months,
+            status_code=503,
+            error_code="GENERATION_BUSY"
+        )
+
         raise HTTPException(
             status_code=503,
             detail="Dataset generation is busy. Please retry shortly.",
@@ -95,7 +107,26 @@ def create_dataset(
         )
 
         # ---ENFORCE DAILY QUOTA---
-        consume_daily_quota(api_key)
+        try:
+            consume_daily_quota(api_key)
+
+        except HTTPException as exc:
+            # ---LOG QUOTA FAILURE---
+            log_api_request(
+                api_key=api_key,
+                clients_requested=request.clients,
+                employees_requested=request.employees,
+                history_months=request.history_months,
+                status_code=exc.status_code,
+                error_code=(
+                    "QUOTA_EXCEEDED"
+                    if exc.status_code == 429
+                    else "QUOTA_UNAVAILABLE"
+                    if exc.status_code == 503
+                    else "QUOTA_ERROR"
+                )
+            )
+            raise
 
         dataset_id = str(uuid4())
         database_path = DATA_DIR / f"{dataset_id}.db"
@@ -127,15 +158,50 @@ def create_dataset(
                     }
                 )
 
-        except HTTPException:
+        # ---LOG VALIDATION FAILURE---
+        except HTTPException as exc:
+            log_api_request(
+                api_key=api_key,
+                dataset_id=dataset_id,
+                clients_requested=request.clients,
+                employees_requested=request.employees,
+                history_months=request.history_months,
+                status_code=exc.status_code,
+                error_code="VALIDATION_FAILED"
+            )
             raise
 
+        # ---LOG GENERATION FAILURE---
         except Exception:
             database_path.unlink(missing_ok=True)
+
+            log_api_request(
+                api_key=api_key,
+                dataset_id=dataset_id,
+                clients_requested=request.clients,
+                employees_requested=request.employees,
+                history_months=request.history_months,
+                status_code=500,
+                error_code="GENERATION_FAILED"
+            )
+
             raise HTTPException(
                 status_code=500,
                 detail="Dataset generation or validation failed"
             )
+
+        # ---LOG SUCCESSFUL GENERATION---
+        log_api_request(
+            api_key=api_key,
+            dataset_id=dataset_id,
+            clients_requested=request.clients,
+            employees_requested=request.employees,
+            history_months=request.history_months,
+            status_code=201,
+            generation_seconds=generation_seconds,
+            validation_seconds=validation_seconds,
+            processing_seconds=generation_seconds + validation_seconds
+        )
 
         return {
             "dataset_id": dataset_id,
@@ -152,6 +218,7 @@ def create_dataset(
                 )
             }
         }
+
 
     finally:
         # ---ALWAYS RELEASE GENERATION LOCK---
