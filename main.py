@@ -57,9 +57,9 @@ def verify_api_key(api_key: str | None = Security(api_key_header)):
 
 # ---REQUEST MODEL---
 class DatasetRequest(BaseModel):
-    clients: int = Field(default=100, ge=1, le=100)
-    employees: int = Field(default=20, ge=1, le=200)
-    history_months: int = Field(default=12, ge=1, le=60)
+    clients: int = Field(default=100, ge=1, le=500)
+    employees: int = Field(default=20, ge=1, le=100)
+    history_months: int = Field(default=12, ge=1, le=12)
     seed: int = 42
 
 # ---HEALTH CHECK---
