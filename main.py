@@ -246,8 +246,18 @@ def get_dataset(
 
 
 # ---DATASET DOWNLOAD---
-
-@app.get("/v1/datasets/{dataset_id}/download")
+@app.get(
+    "/v1/datasets/{dataset_id}/download",
+    response_class=StreamingResponse,
+    responses={
+        200: {
+            "description": "Download SQLite database",
+            "content": {
+                "application/vnd.sqlite3": {}
+            }
+        }
+    }
+)
 def download_dataset(
     dataset_id: UUID,
     api_key: str = Depends(verify_api_key)
